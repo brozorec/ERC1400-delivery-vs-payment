@@ -90,7 +90,7 @@ function listenForEvents() {
     console.log(addr);
     console.log(intent);
     const res = await stripe.paymentIntents.capture(
-      req.query.payment_intent_id
+      intent
     );
     console.log(res);
   });
