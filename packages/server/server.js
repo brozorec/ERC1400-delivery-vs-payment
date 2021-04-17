@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const stripe = require('stripe')(process.env.STRIPE_KEY);
 const express = require('express');
+const { ethers, Contract } = require('ethers');
 const app = express();
 app.use(express.static('.'));
 app.use(express.json());
@@ -79,3 +80,17 @@ app.get('/release', async (req, res) => {
 });
 
 app.listen(4242, () => console.log('Running on port 4242'));
+
+function listenForEvents() {
+  const abi = require('./ERC1400.abi.js'); 
+  const provider = new ethers.providers.JsonRpcProvider("https://kovan.infura.io/v3/" + process.env.INFURA_ID);
+  const contract = new Contract("0x90076F213a376e4710839295E18f9aC69DFd92d2", abi, provider);
+  const filter = contract.filters.ReleasePaidTokens();
+
+  contract.on(filter, (addr, intent) => {
+    console.log(addr);
+    console.log(intent);
+  });
+}
+
+listenForEvents();
