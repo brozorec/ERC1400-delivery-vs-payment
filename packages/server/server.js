@@ -45,9 +45,9 @@ app.get('/check', async (req, res) => {
       req.query.payment_intent_id
     );
     console.log(intent);
-    res.json({ success: intent.status === 'requires_capture' });
+    res.json({ SUCCESS: intent.status === 'requires_capture' });
   } catch (e) {
-    return res.send({ success: false, error: e.message });
+    return res.send({ SUCCESS: false, error: e.message });
   }
 });
 
