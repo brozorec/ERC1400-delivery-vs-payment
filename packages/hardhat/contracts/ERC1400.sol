@@ -8,6 +8,7 @@ pragma solidity >=0.6.0 <0.9.0;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@chainlink/contracts/src/v0.6/ChainlinkClient.sol";
 
 //import "erc1820/contracts/ERC1820Client.sol";
 //import "./interface/ERC1820Implementer.sol";
@@ -27,20 +28,12 @@ import "./IERC1400.sol";
  * @title ERC1400
  * @dev ERC1400 logic
  */
-contract ERC1400 is IERC20, IERC1400, Ownable {
+contract ERC1400 is IERC20, IERC1400, Ownable, ChainlinkClient {
   using SafeMath for uint256;
 
   // Token
   string constant internal ERC1400_INTERFACE_NAME = "ERC1400Token";
   string constant internal ERC20_INTERFACE_NAME = "ERC20Token";
-
-  // Token extensions
-  string constant internal ERC1400_TOKENS_CHECKER = "ERC1400TokensChecker";
-  string constant internal ERC1400_TOKENS_VALIDATOR = "ERC1400TokensValidator";
-
-  // User extensions
-  string constant internal ERC1400_TOKENS_SENDER = "ERC1400TokensSender";
-  string constant internal ERC1400_TOKENS_RECIPIENT = "ERC1400TokensRecipient";
 
   /************************************* Token description ****************************************/
   string internal _name;
@@ -129,6 +122,17 @@ contract ERC1400 is IERC20, IERC1400, Ownable {
   mapping (bytes32 => mapping (address => bool)) internal _isControllerByPartition;
   /************************************************************************************************/
 
+  /******************************************* Oracle *********************************************/
+  // Kovan
+  address private oracle = 0x8bF43cA0b3CeAE338C9A579E3eA8DC6b0aDcAe09;
+  bytes32 private jobId = "906ac2562c77472cb5a881dce34e000c";
+  uint256 private fee = 0.1 * 10 ** 18;
+
+  mapping(bytes32 => address) public receivers;
+  mapping(bytes32 => string) public paymentIntents;
+
+  event ReleasePaidTokens(address indexed receiver, string intent);
+  /************************************************************************************************/
 
   /***************************************** Modifiers ********************************************/
   /**
@@ -183,6 +187,8 @@ contract ERC1400 is IERC20, IERC1400, Ownable {
 
     _isControllable = true;
     _isIssuable = true;
+
+    setPublicChainlinkToken();
 
     // Register contract in ERC1820 registry
     //ERC1820Client.setInterfaceImplementation(ERC1400_INTERFACE_NAME, address(this));
@@ -524,23 +530,50 @@ contract ERC1400 is IERC20, IERC1400, Ownable {
     _issueByPartition(partition, msg.sender, tokenHolder, value, data);
   }
 
-  function reserve(uint256 value) external {
+  function addressToString(address _address) internal pure returns(string memory) {
+    bytes32 _bytes = bytes32(uint256(_address));
+    bytes memory HEX = "0123456789abcdef";
+    bytes memory _string = new bytes(42);
+    _string[0] = '0';
+    _string[1] = 'x';
+    for(uint i = 0; i < 20; i++) {
+      _string[2+i*2] = HEX[uint8(_bytes[i + 12] >> 4)];
+      _string[3+i*2] = HEX[uint8(_bytes[i + 12] & 0x0f)];
+    }
+    return string(_string);
+  }
+
+  function reserveAndVerifyPayment(uint256 amount, string calldata intent) external returns (bytes32 requestId) {
     require(_defaultPartitions.length != 0, "55"); // 0x55	funds locked (lockup period)
 
-    _issueByPartition(_defaultPartitions[0], msg.sender, msg.sender, value, "");
-  }
+    _issueByPartition(_defaultPartitions[0], msg.sender, msg.sender, amount, "");
 
-  function checkPayment(address tokenHolder, uint256 value) external {
     // call Chainlink
+    Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.releasePaidTokens.selector);
+    //request.add("extPath", "check");
+    string memory _addr = addressToString(msg.sender);
+    string memory _q = string(abi.encodePacked("payment_intent_id=", intent, "&addr=", _addr));
+    request.add("get", string(abi.encodePacked("https://dvp-server.barakov.xyz/check?", _q)));
+    request.add("queryParams", _q);
+    request.add("path", "SUCCESS");
+
+    requestId = sendChainlinkRequestTo(oracle, request, fee);
+    receivers[requestId] = msg.sender;
+    paymentIntents[requestId] = intent;
   }
 
-  function release(bytes32 requestId, address to) external {
+  function releasePaidTokens(bytes32 requestId, bool success) public recordChainlinkFulfillment(requestId) {
     require(_defaultPartitions.length > 1, "55"); // 0x55	funds locked (lockup period)
+    require(success);
 
-    uint256 value = _balanceOfByPartition[to][_defaultPartitions[0]];
-    _redeemByDefaultPartitions(to, to, value, "");
+    address receiver = receivers[requestId];
+    string memory intent = paymentIntents[requestId];
+    uint256 amount = _balanceOfByPartition[receiver][_defaultPartitions[0]];
+    _redeemByDefaultPartitions(receiver, receiver, amount, "");
 
-    _issueByPartition(_defaultPartitions[1], to, to, value, "");
+    _issueByPartition(_defaultPartitions[1], receiver, receiver, amount, "");
+
+    emit ReleasePaidTokens(receiver, intent);
   }
 
   /************************************************************************************************/
