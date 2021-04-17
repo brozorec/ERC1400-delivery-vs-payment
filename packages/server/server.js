@@ -85,11 +85,14 @@ function listenForEvents() {
   const abi = require('./ERC1400.abi.js'); 
   const provider = new ethers.providers.JsonRpcProvider("https://kovan.infura.io/v3/" + process.env.INFURA_ID);
   const contract = new Contract("0x90076F213a376e4710839295E18f9aC69DFd92d2", abi, provider);
-  const filter = contract.filters.ReleasePaidTokens();
 
-  contract.on(filter, (addr, intent) => {
+  contract.on('ReleasePaidTokens', async (addr, intent) => {
     console.log(addr);
     console.log(intent);
+    const res = await stripe.paymentIntents.capture(
+      req.query.payment_intent_id
+    );
+    console.log(res);
   });
 }
 
