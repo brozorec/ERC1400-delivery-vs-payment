@@ -14,7 +14,7 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:4242",
+  "proxy": "https://dvp-server.barakov.xyz",
   "dependencies": {
     "@ant-design/icons": "^4.2.2",
     "@apollo/react-hooks": "^4.0.0",
