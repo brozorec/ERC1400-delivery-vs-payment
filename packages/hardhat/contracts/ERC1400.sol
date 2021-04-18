@@ -201,6 +201,106 @@ contract ERC1400 is IERC20, IERC1400, Ownable, ChainlinkClient {
 
 
   /************************************************************************************************/
+  /************************************ DELIVERY-vs-PAYMENT ***************************************/
+  /************************************************************************************************/
+
+  function reserveAndVerifyPayment(
+    uint256 amount,
+    string calldata intent,
+    bytes calldata sig
+  ) external returns (bytes32 requestId) {
+    require(_defaultPartitions.length != 0, "55"); // 0x55	funds locked (lockup period)
+
+    // verify sig validity
+    bytes32 message = prefixed(keccak256(abi.encodePacked(msg.sender, amount, intent)));
+    require(recoverSigner(message, sig) == msg.sender, "Not same user");
+
+    // issue "reserved" tokens
+    _issueByPartition(_defaultPartitions[0], msg.sender, msg.sender, amount, "");
+
+    // call Chainlink
+    Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.releasePaidTokens.selector);
+    //request.add("extPath", "check");
+    string memory _addr = addressToString(msg.sender);
+    string memory _q = string(abi.encodePacked("payment_intent_id=", intent, "&addr=", _addr));
+    request.add("get", string(abi.encodePacked("https://dvp-server.barakov.xyz/check?", _q)));
+    request.add("queryParams", _q);
+    request.add("path", "SUCCESS");
+
+    requestId = sendChainlinkRequestTo(oracle, request, fee);
+    receivers[requestId] = msg.sender;
+    paymentIntents[requestId] = intent;
+  }
+
+  function releasePaidTokens(bytes32 requestId, bool success) public recordChainlinkFulfillment(requestId) {
+    require(_defaultPartitions.length > 1, "55"); // 0x55	funds locked (lockup period)
+    require(success);
+
+    address receiver = receivers[requestId];
+    string memory intent = paymentIntents[requestId];
+    uint256 amount = _balanceOfByPartition[receiver][_defaultPartitions[0]];
+    _redeemByDefaultPartitions(receiver, receiver, amount, "");
+
+    _issueByPartition(_defaultPartitions[1], receiver, receiver, amount, "");
+
+    emit ReleasePaidTokens(receiver, intent);
+  }
+
+  /************************************************************************************************/
+  /******************************** Utils internal functions ***************************************/
+
+  function addressToString(address _address) internal pure returns(string memory) {
+    bytes32 _bytes = bytes32(uint256(_address));
+    bytes memory HEX = "0123456789abcdef";
+    bytes memory _string = new bytes(42);
+    _string[0] = '0';
+    _string[1] = 'x';
+    for(uint i = 0; i < 20; i++) {
+      _string[2+i*2] = HEX[uint8(_bytes[i + 12] >> 4)];
+      _string[3+i*2] = HEX[uint8(_bytes[i + 12] & 0x0f)];
+    }
+    return string(_string);
+  }
+
+  function splitSignature(bytes memory sig) internal pure returns (uint8, bytes32, bytes32) {
+    require(sig.length == 65);
+
+    bytes32 r;
+    bytes32 s;
+    uint8 v;
+
+    assembly {
+      // first 32 bytes, after the length prefix
+      r := mload(add(sig, 32))
+      // second 32 bytes
+      s := mload(add(sig, 64))
+      // final byte (first byte of the next 32 bytes)
+      v := byte(0, mload(add(sig, 96)))
+    }
+
+    return (v, r, s);
+  }
+
+  function recoverSigner(bytes32 message, bytes memory sig) internal pure returns (address) {
+    uint8 v;
+    bytes32 r;
+    bytes32 s;
+
+    (v, r, s) = splitSignature(sig);
+
+    return ecrecover(message, v, r, s);
+  }
+
+  // Builds a prefixed hash to mimic the behavior of eth_sign.
+  function prefixed(bytes32 hash) internal pure returns (bytes32) {
+    return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
+  }
+
+  /************************************************************************************************/
+
+
+
+  /************************************************************************************************/
   /****************************** EXTERNAL FUNCTIONS (ERC20 INTERFACE) ****************************/
   /************************************************************************************************/
 
@@ -529,55 +629,9 @@ contract ERC1400 is IERC20, IERC1400, Ownable, ChainlinkClient {
   {
     _issueByPartition(partition, msg.sender, tokenHolder, value, data);
   }
-
-  function addressToString(address _address) internal pure returns(string memory) {
-    bytes32 _bytes = bytes32(uint256(_address));
-    bytes memory HEX = "0123456789abcdef";
-    bytes memory _string = new bytes(42);
-    _string[0] = '0';
-    _string[1] = 'x';
-    for(uint i = 0; i < 20; i++) {
-      _string[2+i*2] = HEX[uint8(_bytes[i + 12] >> 4)];
-      _string[3+i*2] = HEX[uint8(_bytes[i + 12] & 0x0f)];
-    }
-    return string(_string);
-  }
-
-  function reserveAndVerifyPayment(uint256 amount, string calldata intent) external returns (bytes32 requestId) {
-    require(_defaultPartitions.length != 0, "55"); // 0x55	funds locked (lockup period)
-
-    _issueByPartition(_defaultPartitions[0], msg.sender, msg.sender, amount, "");
-
-    // call Chainlink
-    Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.releasePaidTokens.selector);
-    //request.add("extPath", "check");
-    string memory _addr = addressToString(msg.sender);
-    string memory _q = string(abi.encodePacked("payment_intent_id=", intent, "&addr=", _addr));
-    request.add("get", string(abi.encodePacked("https://dvp-server.barakov.xyz/check?", _q)));
-    request.add("queryParams", _q);
-    request.add("path", "SUCCESS");
-
-    requestId = sendChainlinkRequestTo(oracle, request, fee);
-    receivers[requestId] = msg.sender;
-    paymentIntents[requestId] = intent;
-  }
-
-  function releasePaidTokens(bytes32 requestId, bool success) public recordChainlinkFulfillment(requestId) {
-    require(_defaultPartitions.length > 1, "55"); // 0x55	funds locked (lockup period)
-    require(success);
-
-    address receiver = receivers[requestId];
-    string memory intent = paymentIntents[requestId];
-    uint256 amount = _balanceOfByPartition[receiver][_defaultPartitions[0]];
-    _redeemByDefaultPartitions(receiver, receiver, amount, "");
-
-    _issueByPartition(_defaultPartitions[1], receiver, receiver, amount, "");
-
-    emit ReleasePaidTokens(receiver, intent);
-  }
-
   /************************************************************************************************/
-  
+
+ 
 
   /*************************************** Token Redemption ***************************************/
   /**
