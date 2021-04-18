@@ -55,7 +55,9 @@ app.get('/check', async (req, res) => {
     console.log(intent);
     console.log(`Intent ${intent.id} checked`);
     const { status, metadata } = intent;
-    res.json({ SUCCESS: status === 'requires_capture' && metadata.addr === req.query.addr });
+    res.json({
+      SUCCESS: status === 'requires_capture' && metadata.addr.toLowerCase() === req.query.addr.toLowerCase()
+    });
   } catch (e) {
     return res.send({ SUCCESS: false, error: e.message });
   }
