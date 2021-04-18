@@ -1,0 +1,32 @@
+{
+  "name": "Check Stripe Payment Intent",
+  "initiators": [
+    {
+      "type": "RunLog",
+      "params": {
+        "address": "0x8bF43cA0b3CeAE338C9A579E3eA8DC6b0aDcAe09"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "type": "HttpGet",
+      "params": {
+        "get": "https://dvp-server.barakov.xyz/check"
+      }
+    },
+    {
+      "type": "JsonParse",
+      "params": {
+        "path": ["SUCCESS"]
+      }
+    },
+    {
+      "type": "EthBool"
+    },
+    {
+      "type": "EthTx"
+    }
+  ],
+  "minPayment": "900000000000000000"
+}
