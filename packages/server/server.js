@@ -9,8 +9,6 @@ app.use(express.static('.'));
 app.use(express.json());
 
 app.post('/create-intent', async (req, res) => {
-  console.log(`User sig: ${req.body.sig}`);
-
   const intent = await stripe.paymentIntents.create({
     amount: req.body.amount,
     currency: 'eur',
@@ -95,7 +93,7 @@ app.listen(4242, () => console.log('Running on port 4242'));
 function listenForEvents() {
   const abi = require('./ERC1400.abi.js'); 
   const provider = new ethers.providers.JsonRpcProvider("https://kovan.infura.io/v3/" + process.env.INFURA_ID);
-  const contract = new Contract("0x90076F213a376e4710839295E18f9aC69DFd92d2", abi, provider);
+  const contract = new Contract("0xAB0Fa3cc3df4c69871937471C585e0D937a0232d", abi, provider);
 
   contract.on('ReleasePaidTokens', async (addr, intent) => {
     console.log(`Intent ${intent} captured.`);
