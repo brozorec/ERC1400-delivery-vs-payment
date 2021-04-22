@@ -79,7 +79,7 @@ const Checkout = ({ provider, address, tx, writeContracts, readContracts }) => {
     if (!stripe || !elements) {
       return;
     }
-    const response = await fetch('https://dvp-server.barakov.xyz/create-intent', {
+    const response = await fetch('/api/create-intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -125,7 +125,7 @@ const Checkout = ({ provider, address, tx, writeContracts, readContracts }) => {
     console.log("[PaymentMethod]", payload);
 
     if (payload.paymentMethod.id) {
-      const response = await fetch('https://dvp-server.barakov.xyz/pay', {
+      const response = await fetch('/api/pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
