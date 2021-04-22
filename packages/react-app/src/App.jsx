@@ -72,11 +72,30 @@ function App(props) {
   const writeContracts = useContractLoader(userProvider)
   if(DEBUG) console.log("🔐 writeContracts",writeContracts)
 
-  const networkDisplay = (
-    <div style={{zIndex:-1, position:'absolute', right:154,top:28,padding:16,color:targetNetwork.color}}>
-      {targetNetwork.name}
-    </div>
-  );
+  let localChainId = userProvider && userProvider._network && userProvider._network.chainId;
+  let networkDisplay = ""
+  if (localChainId && selectedChainId && localChainId != selectedChainId ){
+    networkDisplay = (
+      <div style={{zIndex:2, position:'absolute', right:0,top:60,padding:16}}>
+        <Alert
+          message={"⚠️ Wrong Network"}
+          description={(
+            <div>
+              You have <b>{NETWORK(selectedChainId).name}</b> selected and you need to be on <b>{NETWORK(localChainId).name}</b>.
+            </div>
+          )}
+          type="error"
+          closable={false}
+        />
+      </div>
+    )
+  } else {
+    networkDisplay = (
+      <div style={{zIndex:-1, position:'absolute', right:154,top:28,padding:16,color:targetNetwork.color}}>
+        {targetNetwork.name}
+      </div>
+    )
+  }
 
   const loadWeb3Modal = useCallback(async () => {
     const provider = await web3Modal.connect();
@@ -113,7 +132,7 @@ function App(props) {
             <Route exact path="/explore">
               <Contract
                 name="ERC1400"
-                signer={userProvider.getSigner()}
+                signer={userProvider ? userProvider.getSigner() : null}
                 provider={userProvider}
                 address={address}
                 blockExplorer={blockExplorer}
