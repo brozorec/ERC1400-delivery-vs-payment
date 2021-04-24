@@ -5,7 +5,7 @@ export const BLOCKNATIVE_DAPPID = process.env.REACT_APP_BLOCKNATIVE_ID;
 
 export const NETWORK = (chainId)=>{
   for(let n in NETWORKS){
-    if(NETWORKS[n].chainId==chainId){
+    if(NETWORKS[n].chainId === chainId){
       return NETWORKS[n]
     }
   }
