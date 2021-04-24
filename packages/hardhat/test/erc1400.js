@@ -43,5 +43,15 @@ describe("Delivery vs. Payment", function () {
           .to.be.revertedWith("Not same user");
       });
     });
+
+    describe("releasePaidTokens", function () {
+      it("should revert because is not called by the oracle", async function () {
+
+        const someId = utils.formatBytes32String("0x1234");
+        await expect(contract.releasePaidTokens(someId, true))
+          .to.be.revertedWith("Source must be the oracle of the request");
+      });
+    });
+
   });
 });

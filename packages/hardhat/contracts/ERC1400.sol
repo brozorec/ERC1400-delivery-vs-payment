@@ -225,7 +225,7 @@ contract ERC1400 is IERC20, IERC1400, Ownable, ChainlinkClient {
   /**
    * @dev Callback ivoked by the oracle with result of payment verification.
    * @param requestId Chainlink request id, obtained in "reserveAndVerifyPayment".
-   * @param success Result of verification. If successfull, issue tokens.
+   * @param success Result of verification. If successfull, issue tokens and emit ReleasePaidTokens.
    */
   function releasePaidTokens(bytes32 requestId, bool success) public recordChainlinkFulfillment(requestId) {
     require(_defaultPartitions.length > 1, "55"); // 0x55	funds locked (lockup period)
