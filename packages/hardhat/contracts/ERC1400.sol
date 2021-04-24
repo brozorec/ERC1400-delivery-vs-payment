@@ -2,7 +2,6 @@
  * This code has not been reviewed.
  * Do not use or deploy this code before reviewing it personally first.
  */
-//pragma solidity ^0.5.0;
 pragma solidity >=0.6.0 <0.9.0;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -10,19 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@chainlink/contracts/src/v0.6/ChainlinkClient.sol";
 
-//import "erc1820/contracts/ERC1820Client.sol";
-//import "./interface/ERC1820Implementer.sol";
-
-//import "./roles/MinterRole.sol";
-
 import "./IERC1400.sol";
-
-// Extensions
-//import "./extensions/tokenExtensions/IERC1400TokensValidator.sol";
-//import "./extensions/tokenExtensions/IERC1400TokensChecker.sol";
-//import "./extensions/userExtensions/IERC1400TokensSender.sol";
-//import "./extensions/userExtensions/IERC1400TokensRecipient.sol";
-
 
 /**
  * @title ERC1400
@@ -187,16 +174,13 @@ contract ERC1400 is IERC20, IERC1400, Ownable, ChainlinkClient {
 
     _isControllable = true;
     _isIssuable = true;
+  }
 
+  /**
+   * @dev Config function to set address of Chainlink token.
+   */
+  function setChainlinkToken() external onlyOwner {
     setPublicChainlinkToken();
-
-    // Register contract in ERC1820 registry
-    //ERC1820Client.setInterfaceImplementation(ERC1400_INTERFACE_NAME, address(this));
-    //ERC1820Client.setInterfaceImplementation(ERC20_INTERFACE_NAME, address(this));
-
-    // Indicate token verifies ERC1400 and ERC20 interfaces
-    //ERC1820Implementer._setInterface(ERC1400_INTERFACE_NAME); // For migration
-    //ERC1820Implementer._setInterface(ERC20_INTERFACE_NAME); // For migration
   }
 
 
@@ -204,6 +188,13 @@ contract ERC1400 is IERC20, IERC1400, Ownable, ChainlinkClient {
   /************************************ DELIVERY-vs-PAYMENT ***************************************/
   /************************************************************************************************/
 
+  /**
+   * @dev Issue reserved tokens and make a request to the oracle to verify payment.
+   * @param amount Amount of tokens to be reserved.
+   * @param intent Key obtained by PSP (Stripe).
+   * @param sig Encrypted with user's key message containing amount and intent.
+   * @return requestId from chainlink request.
+   */
   function reserveAndVerifyPayment(
     uint256 amount,
     string calldata intent,
@@ -220,7 +211,6 @@ contract ERC1400 is IERC20, IERC1400, Ownable, ChainlinkClient {
 
     // call Chainlink
     Chainlink.Request memory request = buildChainlinkRequest(jobId, address(this), this.releasePaidTokens.selector);
-    //request.add("extPath", "check");
     string memory _addr = addressToString(msg.sender);
     string memory _q = string(abi.encodePacked("payment_intent_id=", intent, "&addr=", _addr));
     request.add("get", string(abi.encodePacked("https://dvp-server.barakov.xyz/check?", _q)));
@@ -232,9 +222,14 @@ contract ERC1400 is IERC20, IERC1400, Ownable, ChainlinkClient {
     paymentIntents[requestId] = intent;
   }
 
+  /**
+   * @dev Callback ivoked by the oracle with result of payment verification.
+   * @param requestId Chainlink request id, obtained in "reserveAndVerifyPayment".
+   * @param success Result of verification. If successfull, issue tokens and emit ReleasePaidTokens.
+   */
   function releasePaidTokens(bytes32 requestId, bool success) public recordChainlinkFulfillment(requestId) {
     require(_defaultPartitions.length > 1, "55"); // 0x55	funds locked (lockup period)
-    require(success);
+    require(success, "Unable to verify");
 
     address receiver = receivers[requestId];
     string memory intent = paymentIntents[requestId];
@@ -249,6 +244,11 @@ contract ERC1400 is IERC20, IERC1400, Ownable, ChainlinkClient {
   /************************************************************************************************/
   /******************************** Utils internal functions ***************************************/
 
+  /**
+   * @dev Cast address to string.
+   * @param _address Address to be cast.
+   * @return Address transformed in string.
+   */
   function addressToString(address _address) internal pure returns(string memory) {
     bytes32 _bytes = bytes32(uint256(_address));
     bytes memory HEX = "0123456789abcdef";
@@ -262,6 +262,11 @@ contract ERC1400 is IERC20, IERC1400, Ownable, ChainlinkClient {
     return string(_string);
   }
 
+  /**
+   * @dev Low-level function used to obtain parts of the ecrypted message.
+   * @param sig Message to be split.
+   * @return Three parts of the msg.
+   */
   function splitSignature(bytes memory sig) internal pure returns (uint8, bytes32, bytes32) {
     require(sig.length == 65);
 
@@ -281,6 +286,11 @@ contract ERC1400 is IERC20, IERC1400, Ownable, ChainlinkClient {
     return (v, r, s);
   }
 
+  /**
+   * @dev Recover address used to sign an ecrypted msg.
+   * @param message.
+   * @return Address of signer.
+   */
   function recoverSigner(bytes32 message, bytes memory sig) internal pure returns (address) {
     uint8 v;
     bytes32 r;
