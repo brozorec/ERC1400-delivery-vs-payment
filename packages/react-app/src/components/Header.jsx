@@ -8,7 +8,6 @@ export default function Header() {
     <a href="https://github.com/brozorec/ERC1400-delivery-vs-payment" target="_blank" rel="noopener noreferrer">
       <PageHeader
         title="Auto DvP"
-        subTitle="..."
         style={{ cursor: "pointer" }}
       />
     </a>
