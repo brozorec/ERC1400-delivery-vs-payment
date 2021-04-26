@@ -3,9 +3,9 @@
 ### Automatiser le cas post-trade des ventes de securities sur les plateformes de tokenisation
 
 Le post-trade sur les plateformes de tokenisation dans le cas des levée de fonds STO,
-soulève encore des risques de contre-partie quand l’émetteur doit lui-même procéder au transfert des titres contre un règlement obligatoire en MNBC.
+soulève encore des risques de contre-partie quand l’émetteur doit lui-même procéder au transfert des titres contre un règlement obligatoire en monnaie fiat.
 Cette dApp apporte la confiance nécessaire au bon fonctionnement du post-trade.
-Elle automatise le settlement en supprimant les manipulations des utilisateurs lors du transfert des security tokens, suite aux STO.
+Elle automatise le règlement-livraison en supprimant les manipulations des utilisateurs lors du transfert des security tokens, suite aux STO.
 
 ## Comment ça marche
 ![General scheme](https://github.com/brozorec/ERC1400-delivery-vs-payment/blob/main/images/general.png)
