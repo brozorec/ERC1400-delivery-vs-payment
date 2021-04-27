@@ -38,7 +38,7 @@ Cet "event" est capté par le serveur et les fonds bloqués sont "capture".
 
 Le projet consiste de 4 éléments :
 
-- ERC1400 smart contract (`/packages/hardhat`) - implémente la logic on-chain
+- ERC1400 smart contract (`/packages/hardhat`) - implémente la logic on-chain. Le smart contract est un fork de https://github.com/ConsenSys/UniversalToken
 - Back-end (`/packages/server`) - Node API qui relie le front-end, le PSP (Stripe) et l'oracle
 - Front-end (`/packages/react-app`) - interface qui permet à un investisseur de réserver et de payer pour des ERC1400
 - Chainlink node (`/packages/chainlink`) - execute un "custom job" et ainsi relie le smart contract le données off-chain
