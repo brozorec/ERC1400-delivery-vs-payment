@@ -3,11 +3,13 @@
 ### Automatiser le cas post-trade des ventes de securities sur les plateformes de tokenisation
 
 Le post-trade sur les plateformes de tokenisation dans le cas des levée de fonds STO,
-soulève encore des risques de contre-partie quand l’émetteur doit lui-même procéder au transfert des titres contre un règlement obligatoire en monnaie fiat.
+soulève encore des risques de contre-partie quand l’émetteur doit lui-même procéder au transfert des titres contre un règlement obligatoire en monnaie fiat. 
 Cette dApp apporte la confiance nécessaire au bon fonctionnement du post-trade.
 Elle automatise le règlement-livraison en supprimant les manipulations des utilisateurs lors du transfert des security tokens, suite aux STO.
 
 ## Comment ça marche
+Aujourd'hui, le cadre reglemantaire ne permet pas aux investisseurs dans un STO de payer en crypto monnaie. Le règlement doit se faire obligatoirement en fiat. C'est pour ça ce projet introduit l'utilisation d'un oracle qui va relier les données de paiement off-chain avec le smart contract.
+
 ![General scheme](https://github.com/brozorec/ERC1400-delivery-vs-payment/blob/main/images/general.png)
 
 ### Étapes :
@@ -31,3 +33,20 @@ Si c'est le cas, la quantité réservée en 6.1 est débloquée et l'investisseu
 5. Le smart contract émet un "event" qui confirme que les jetons ont été bien transférés à l'investisseur.
 Cet "event" est capté par le serveur et les fonds bloqués sont "capture".
 <img src="https://github.com/brozorec/ERC1400-delivery-vs-payment/blob/main/images/step5.png" height="350px" width="350px"/>
+
+## Structure
+
+Le projet consiste de 4 éléments :
+
+- ERC1400 smart contract (`/packages/hardhat`) - implémente la logic on-chain
+- Back-end (`/packages/server`) - Node API qui relie le front-end, le PSP (Stripe) et l'oracle
+- Front-end (`/packages/react-app`) - interface qui permet à un investisseur de réserver et de payer pour des ERC1400
+- Chainlink node (`/packages/chainlink`) - execute un "custom job" et ainsi relie le smart contract le données off-chain
+
+## Installation et tests
+
+1. `git clone https://github.com/brozorec/ERC1400-delivery-vs-payment.git`
+2. `cd ERC1400-delivery-vs-payment`
+3. `yarn`
+4. `yarn fork`
+5. dans une autre fenêtre du terminal `yarn test`
