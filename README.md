@@ -8,7 +8,7 @@ Cette dApp apporte la confiance nécessaire au bon fonctionnement du post-trade.
 Elle automatise le règlement-livraison en supprimant les manipulations des utilisateurs lors du transfert des security tokens, suite aux STO.
 
 ## Comment ça marche
-Aujourd'hui, le cadre reglemantaire ne permet pas aux investisseurs dans un STO de payer en crypto monnaie. Le règlement doit se faire obligatoirement en fiat. C'est pour ça ce projet introduit l'utilisation d'un oracle qui va relier les données de paiement off-chain avec le smart contract.
+Aujourd'hui, le cadre reglemantaire ne permet pas aux investisseurs dans un STO de payer en crypto monnaie. Le règlement doit se faire obligatoirement en fiat. Ce projet introduit l'utilisation d'un oracle qui va relier les données de paiement off-chain avec le smart contract.
 
 ![General scheme](https://github.com/brozorec/ERC1400-delivery-vs-payment/blob/main/images/general.png)
 
